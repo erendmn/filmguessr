@@ -1,0 +1,152 @@
+import json, sys, re, hashlib, random, concurrent.futures as cf, urllib.request, urllib.parse
+TOK=[l.split('=',1)[1].strip().strip('"') for l in open('/Users/erenduman/projeler/watchwise/.env.local') if l.startswith('TMDB_READ_TOKEN=')][0]
+def get(path, **q):
+    url='https://api.themoviedb.org/3'+path+('?'+urllib.parse.urlencode(q) if q else '')
+    req=urllib.request.Request(url, headers={'Authorization':'Bearer '+TOK})
+    err=None
+    for i in range(3):
+        try: return json.load(urllib.request.urlopen(req, timeout=20))
+        except Exception as e: err=e
+    print('ERR',url,err,file=sys.stderr); return None
+
+# Curated 100 Turkish films (TMDB ids), classics + modern
+IDS = [
+ 83651,31408,111799,123611,71193,31402,31405,31547,80961,31412,124611,58897,31401,54339,31415,69319,74302,123592,184979,
+ 157559,257261,
+ 96049,84014,80958,110028,20787,52556,26900,31413,52111,46629,27104,53934,33901,
+ 38794,27211,53206,220002,80841,157737,452606,
+ 637920,265169,74879,472454,31026,8905,418472,665733,57892,92834,30634,31060,13296,171160,246524,528372,64433,48763,
+ 321050,629500,27953,450720,219217,499461,477313,785534,682152,89111,650360,27721,12417,312849,56919,161808,60228,
+ 49834,27959,236317,366759,381938,334394,363,18421,352196,539186,
+ 27275,24426,13393,64468,44160,920394,307016,27957,59811,674349,1044302,443486,50046,66574,
+]
+assert len(IDS)==len(set(IDS)), 'dup ids'
+print('candidates',len(IDS))
+
+GENRE_TR={28:'Aksiyon',12:'Macera',16:'Animasyon',35:'Komedi',80:'Suç',99:'Belgesel',18:'Dram',10751:'Aile',14:'Fantastik',36:'Tarih',27:'Korku',10402:'Müzik',9648:'Gizem',10749:'Romantik',878:'Bilim Kurgu',10770:'TV Filmi',53:'Gerilim',10752:'Savaş',37:'Western'}
+
+def clean_franchise(name, title):
+    import re
+    n=re.sub(r'\s*(\[Seri\]|Koleksiyonu|Serisi|Üçlemesi|Collection|Serisi)\s*$','',name).strip()
+    return n if n and n.lower() in title.lower() else ''
+BD=json.load(open('data/backdrops.json'))
+OCR=json.load(open('data/ocr.json'))
+DUPES=json.load(open('data/dupes.json'))
+# Elle işaretlenen spoiler görseller (logo/afiş; OCR yakalayamadı)
+MANUAL_BLACKLIST={'/saKuvyZZaPLFAHSLnIQCLqptJGW.jpg','/luvOF1TM1NGYZy2isUtTDu1REH1.jpg',  # G.O.R.A. logo
+ '/xwBMzAq3JFO4U7aSvAng9jcoZyH.jpg','/eFu4MjMjOehLqh61u0bjinuwVpg.jpg','/yhSXAOU9vAMbba4TQsOS3IQf0e8.jpg',  # Arif V 216 logo
+ '/adSkMZfcdsN8d8ZKhL14ntEeT22.jpg',  # Vizontele Tuuba yunanca afiş
+}
+def norm(t):
+    return re.sub(r'[^a-z0-9çğıöşü]+',' ', t.replace('İ','i').replace('I','ı').lower()).split()
+def lev(a,b):
+    if abs(len(a)-len(b))>1: return 9
+    prev=list(range(len(b)+1))
+    for i,ca in enumerate(a,1):
+        cur=[i]
+        for j,cb in enumerate(b,1):
+            cur.append(min(prev[j]+1,cur[j-1]+1,prev[j-1]+(ca!=cb)))
+        prev=cur
+    return prev[-1]
+def has_spoiler_text(fn, title):
+    txt=OCR.get(fn,'')
+    if not txt: return False
+    tw=[w for w in norm(title) if len(w)>=4]
+    for line in txt.split('\n'):
+        if not line: continue
+        s_,h=line.rsplit('|',1)
+        if float(h)>=0.05: return True
+        for w in norm(s_):
+            if len(w)>=4 and any(lev(w,t)<=1 for t in tw): return True
+    return False
+def fetch(mid):
+    d=get(f'/movie/{mid}', language='tr-TR', append_to_response='credits')
+    if not d: return None
+    cands=BD.get(str(mid),[])
+    bd=[b for b in cands if b['file'] not in DUPES and b['path'] not in MANUAL_BLACKLIST and not has_spoiler_text(b['file'], d['title'])]
+    dropped=len(cands)-len(bd)
+    bd=sorted(bd, key=lambda b:(b['lang'] is not None, -b['votes']))
+    cast=[c['name'] for c in d['credits']['cast'][:3]]
+    directors=[c['name'] for c in d['credits']['crew'] if c['job']=='Director']
+    return {
+        'id':mid,'title':d['title'],'original_title':d['original_title'],
+        'year':(d.get('release_date') or '')[:4],
+        'genres':[GENRE_TR.get(g['id'],g['name']) for g in d['genres']],
+        'rating':round(d.get('vote_average') or 0,1),'votes':d.get('vote_count',0),
+        'actor':cast[0] if cast else '', 'cast':cast,
+        'director':', '.join(directors),
+        'franchise':clean_franchise((d.get('belongs_to_collection') or {}).get('name',''), d['title']),
+        'overview':d.get('overview',''),'poster':d.get('poster_path'),
+        'backdrops':[b['path'] for b in bd], 'dropped':dropped,
+    }
+
+with cf.ThreadPoolExecutor(12) as ex:
+    films=[f for f in ex.map(fetch, IDS) if f]
+
+from PIL import Image, ImageStat
+def best_crop(mid, src, z, seed):
+    # en 'dolu' (yüksek std) kırpma bölgesini seç; aynı görselin farklı kırpmaları için seed ile çeşitlendir
+    p=f"data/bd/{mid}_{src.strip('/').replace('.jpg','')}.jpg"
+    try: im=Image.open(p).convert('L')
+    except Exception: return 50,50
+    W,H=im.size; cw,ch=W/z, H/z
+    best=(-1,50,50)
+    cands=[(x,y) for x in range(10,91,10) for y in range(10,91,10)]
+    rnd=random.Random(src+str(seed)); rnd.shuffle(cands)
+    for x,y in cands:
+        left=(W-cw)*x/100; top=(H-ch)*y/100
+        st=ImageStat.Stat(im.crop((int(left),int(top),int(left+cw),int(top+ch)))).stddev[0]
+        if st>best[0]: best=(st,x,y)
+    return best[1],best[2]
+def h(s):
+    return int(hashlib.md5(s.encode()).hexdigest(),16)
+
+puzzles=[]
+for f in films:
+    bd=f['backdrops']
+    k=min(len(bd),6)
+    print(f"{f['title']:35s} usable={len(bd):2d} dropped={f['dropped']}")
+    if k<2:
+        print('SKIP (too few backdrops)',f['title'],len(bd)); continue
+    bd=bd[:k]
+    views=[]
+    need=6-k
+    zooms=[2.8,2.3,2.0,1.7][:need]
+    # crops taken from the last backdrops, which are revealed in full later
+    for i,z in enumerate(zooms):
+        src=bd[(k-1-i)%k]
+        x,y=best_crop(f['id'], src, z, i)
+        views.append({'p':src,'z':z,'x':x,'y':y})
+    for src in bd: views.append({'p':src,'z':1,'x':50,'y':50})
+    answers=[f['title']]
+    if f['original_title'] and f['original_title'].lower()!=f['title'].lower(): answers.append(f['original_title'])
+    puzzles.append({'id':f['id'],'answers':answers,'year':f['year'],'genre':', '.join(f['genres']),'rating':f['rating'],
+                    'actor':f['actor'],'director':f['director'],'franchise':f['franchise'],'overview':f['overview'],
+                    'poster':f['poster'],'views':views})
+
+print('puzzles',len(puzzles))
+puzzles=puzzles[:100]
+random.Random(4242).shuffle(puzzles)
+for i,p in enumerate(puzzles): p['num']=i+1
+json.dump(puzzles, open('src/data/puzzles.json','w'), ensure_ascii=False)
+
+# suggestion list from survey + puzzle answers
+survey=json.load(open('data/survey.json'))
+titles={}
+def add(t,y,fr=''):
+    if not t: return
+    key=t.strip().lower()
+    if key not in titles: titles[key]={'t':t.strip(),'y':y or '','f':fr}
+for m in survey:
+    if not m.get('title'): continue
+    add(m['title'],(m.get('release_date') or '')[:4])
+    if m.get('original_title') and m['original_title'].lower()!=m['title'].lower():
+        add(m['original_title'],(m.get('release_date') or '')[:4])
+for p in puzzles:
+    for a in p['answers']: 
+        add(a,p['year'],p['franchise'])
+        titles[a.strip().lower()]['f']=p['franchise']
+out=sorted(titles.values(), key=lambda x:x['t'].lower())
+json.dump(out, open('src/data/titles.json','w'), ensure_ascii=False)
+print('titles',len(out))
+for p in puzzles[:100]: print(p['num'],p['answers'][0],p['year'],len(p['views']),'crops=',sum(1 for v in p['views'] if v['z']>1), p['franchise'])
