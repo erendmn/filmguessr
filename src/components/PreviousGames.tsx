@@ -1,10 +1,16 @@
-import { Link } from 'react-router-dom'
-import { computeStats, dateForNumber, todayNumber } from '../lib/game'
+import { Link, useNavigate } from 'react-router-dom'
+import { computeStats, dateForNumber, randomUnplayed, todayNumber } from '../lib/game'
 
 export function PreviousGames() {
+  const navigate = useNavigate()
   const today = todayNumber()
   const stats = computeStats(today)
   const items = [...stats.results].reverse()
+  const unplayed = items.filter((r) => r.state === 'unplayed').length
+  const playRandom = () => {
+    const n = randomUnplayed(today)
+    if (n) navigate(n === today ? '/' : `/p/${n}`)
+  }
   return (
     <div className="previous-games">
       <h2 className="page-title">Önceki Günler</h2>
@@ -25,9 +31,15 @@ export function PreviousGames() {
           <div className="guess-cube success" /> Doğru
         </div>
       </div>
-      <Link to="/" className="mainButton share-results-btn" style={{ alignSelf: 'center', display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
-        Bugünün Filmine Dön
-      </Link>
+      <div className="link-row" style={{ margin: '0 0 4px' }}>
+        <Link to="/" className="mainButton share-results-btn" style={{ marginBottom: 0, display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
+          Bugünün Filmine Dön
+        </Link>
+        <button className="mainButton" style={{ height: 42 }} onClick={playRandom} disabled={unplayed === 0}>
+          🎲 Rastgele Oyna ({unplayed} kaldı)
+        </button>
+      </div>
+      <div className="prev-grid">
       {items.map((r) => {
         const d = dateForNumber(r.num)
         const done = r.state === 'win' || r.state === 'lose'
@@ -46,13 +58,14 @@ export function PreviousGames() {
                 ))}
               </div>
             )}
-            {done && <span className="answer">{r.answer}</span>}
             <span className={`status ${r.state}`}>
               {r.state === 'win' ? 'Bildin ✓' : r.state === 'lose' ? 'Bilemedin' : r.state === 'playing' ? 'Devam et →' : 'Oyna →'}
             </span>
+            {done && <span className="answer">{r.answer}</span>}
           </Link>
         )
       })}
+      </div>
     </div>
   )
 }

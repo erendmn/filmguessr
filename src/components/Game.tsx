@@ -13,6 +13,7 @@ import {
   MAX_GUESSES,
   nextMidnight,
   puzzleForNumber,
+  puzzles,
   rankFor,
   computeStats,
   saveGame,
@@ -430,7 +431,7 @@ function Footer({ num, today, navigate }: { num: number; today: number; navigate
         </button>
       </div>
       <p className="fine">
-        Her gün gece yarısı yeni bir Türk filmi. Yeşilçam'dan bugüne 100 film. Görseller ve veriler{' '}
+        Her gün gece yarısı yeni bir Türk filmi. Yeşilçam'dan bugüne {puzzles.length} film. Görseller ve veriler{' '}
         <a href="https://www.themoviedb.org/" target="_blank" rel="noopener noreferrer">
           TMDB
         </a>

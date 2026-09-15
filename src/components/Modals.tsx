@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { computeStats, copyText, HASHTAG, MAX_GUESSES, rankFor, RANKS, SITE_NAME, SITE_URL, todayNumber } from '../lib/game'
+import { computeStats, puzzles, copyText, HASHTAG, MAX_GUESSES, rankFor, RANKS, SITE_NAME, SITE_URL, todayNumber } from '../lib/game'
 
 export type ModalKind = 'none' | 'howto' | 'about' | 'stats'
 
@@ -54,7 +54,7 @@ export function AboutModal({ onClose }: { onClose: () => void }) {
         Yeşilçam klasiklerinden Nuri Bilge Ceylan sinemasına, Kemal Sunal komedilerinden günümüz gişe filmlerine — farklı dönem ve türlerden, hem çok
         bilinen hem de daha az bilinen filmler var.
       </p>
-      <p>Her gün gece yarısı (Türkiye saatiyle) yeni bir film gelir. Kaçırdığın günleri <b>Önceki Günler</b>'den oynayabilirsin.</p>
+      <p>Havuzda şu an <b>{puzzles.length} Türk filmi</b> var. Her gün gece yarısı yeni bir film gelir; geçmiş günlerin tamamını <b>Önceki Günler</b>'den oynayabilirsin.</p>
       <p style={{ fontSize: 12.5, color: '#94a3b8' }}>
         Sahne görselleri ve film bilgileri{' '}
         <a href="https://www.themoviedb.org/" target="_blank" rel="noopener noreferrer">

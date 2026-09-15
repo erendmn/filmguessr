@@ -861,10 +861,17 @@ a {
   margin: 0;
   font-size: 12.5px;
 }
+.prev-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
 .prev-item {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
   align-items: center;
-  gap: 12px;
+  gap: 4px 8px;
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -898,9 +905,14 @@ a {
   height: 16px;
   border-radius: 4px;
 }
+.prev-item .emoji-track,
+.prev-item > span:not(.status):not(.answer) {
+  grid-column: 1;
+}
 .prev-item .status {
-  margin-left: auto;
-  font-size: 12px;
+  grid-column: 2;
+  grid-row: 1;
+  font-size: 11.5px;
   color: var(--muted);
   white-space: nowrap;
 }
@@ -911,7 +923,8 @@ a {
   color: #f87171;
 }
 .prev-item .answer {
-  font-size: 12px;
+  grid-column: 1 / -1;
+  font-size: 11.5px;
   color: var(--muted);
   overflow: hidden;
   text-overflow: ellipsis;

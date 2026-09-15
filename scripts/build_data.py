@@ -10,16 +10,7 @@ def get(path, **q):
     print('ERR',url,err,file=sys.stderr); return None
 
 # Curated 100 Turkish films (TMDB ids), classics + modern
-IDS = [
- 83651,31408,111799,123611,71193,31402,31405,31547,80961,31412,124611,58897,31401,54339,31415,69319,74302,123592,184979,
- 157559,257261,
- 96049,84014,80958,110028,20787,52556,26900,31413,52111,46629,27104,53934,33901,
- 38794,27211,53206,220002,80841,157737,452606,
- 637920,265169,74879,472454,31026,8905,418472,665733,57892,92834,30634,31060,13296,171160,246524,528372,64433,48763,
- 321050,629500,27953,450720,219217,499461,477313,785534,682152,89111,650360,27721,12417,312849,56919,161808,60228,
- 49834,27959,236317,366759,381938,334394,363,18421,352196,539186,
- 27275,24426,13393,64468,44160,920394,307016,27957,59811,674349,1044302,443486,50046,66574,
-]
+_ids=json.load(open('data/ids.json')); CURATED=set(_ids['curated']); IDS=_ids['curated']+_ids['auto']
 assert len(IDS)==len(set(IDS)), 'dup ids'
 print('candidates',len(IDS))
 
@@ -119,7 +110,7 @@ for f in films:
     bd=f['backdrops']
     k=min(len(bd),6)
     print(f"{f['title']:35s} usable={len(bd):2d} dropped={f['dropped']}")
-    if k<2:
+    if k<(2 if f['id'] in CURATED else 3):
         print('SKIP (too few backdrops)',f['title'],len(bd)); continue
     bd=bd[:k]
     # Sahne sırası: zor -> kolay. 1-2: yüz içermeyen yakın plan kırpmalar; sonra tam kareler,
@@ -145,7 +136,6 @@ for f in films:
                     'poster':f['poster'],'views':views})
 
 print('puzzles',len(puzzles))
-puzzles=puzzles[:100]
 random.Random(4242).shuffle(puzzles)
 for i,p in enumerate(puzzles): p['num']=i+1
 json.dump(puzzles, open('src/data/puzzles.json','w'), ensure_ascii=False)

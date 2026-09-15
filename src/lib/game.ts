@@ -25,7 +25,8 @@ export const SITE_URL = 'https://filmguessr.vercel.app'
 export const HASHTAG = '#FilmGuessr'
 export const MAX_GUESSES = 6
 export const SKIP = 'Atlandı!'
-export const START_DATE = new Date(2026, 7, 17) // 17 Ağustos 2026 = Film #1
+// Bugün = Film #300; geçmiş 299 gün arşivden oynanabilir, sonraki günler havuzdan sırayla gelir
+export const START_DATE = new Date(2025, 10, 20) // 20 Kasım 2025 = Film #1
 export const IMG = (path: string, size = 'w780') => `https://image.tmdb.org/t/p/${size}${path}`
 
 export const puzzles = puzzlesRaw as Puzzle[]
@@ -77,7 +78,8 @@ export function isFranchiseMatch(guess: string, p: Puzzle) {
 }
 
 /* ---------- Storage ---------- */
-const KEY = (n: number) => `fg:v1:${n}`
+// Kayıt anahtarı bulmaca numarasına değil filmin TMDB id'sine bağlı: havuz büyüyünce ilerleme kaymaz
+const KEY = (n: number) => `fg:v2:${puzzleForNumber(n).id}`
 export function loadSaved(n: number): Saved {
   try {
     const raw = localStorage.getItem(KEY(n))
@@ -164,6 +166,14 @@ export function cubesToEmoji(cubes: ('s' | 'f' | 'p' | 'q')[]) {
   const out = cubes.map((c) => m[c])
   while (out.length < MAX_GUESSES) out.push('⬜')
   return out.join(' ')
+}
+export function randomUnplayed(upTo: number): number | null {
+  const c: number[] = []
+  for (let n = 1; n <= upTo; n++) {
+    const s = loadSaved(n)
+    if (s.state === 'playing' && s.guesses.length === 0) c.push(n)
+  }
+  return c.length ? c[Math.floor(Math.random() * c.length)] : null
 }
 export function shareText(num: number, s: Saved, p: Puzzle, rank?: string) {
   const cubes = s.guesses.map((g, i) => (isCorrect(g, p) ? 's' : s.partial[i] ? 'p' : 'f')) as ('s' | 'f' | 'p')[]
