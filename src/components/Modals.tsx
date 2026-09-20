@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { computeStats, puzzles, copyText, HASHTAG, MAX_GUESSES, rankFor, RANKS, SITE_NAME, SITE_URL, todayNumber } from '../lib/game'
+import { computeStats, copyText, HASHTAG, MAX_GUESSES, rankFor, RANKS, SITE_NAME, SITE_URL, todayNumber } from '../lib/game'
 
 export type ModalKind = 'none' | 'howto' | 'about' | 'stats'
 
