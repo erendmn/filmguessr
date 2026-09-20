@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { computeStats, dateForNumber, randomUnplayed, todayNumber } from '../lib/game'
+import { computeStats, randomUnplayed, todayNumber } from '../lib/game'
 
 export function PreviousGames() {
   const navigate = useNavigate()
@@ -13,7 +13,7 @@ export function PreviousGames() {
   }
   return (
     <div className="previous-games">
-      <h2 className="page-title">Önceki Günler</h2>
+      <h2 className="page-title">Filmler</h2>
       <div className="prev-game-legend">
         <div className="legend-row">
           <span>❓</span> Oynanmadı
@@ -33,7 +33,7 @@ export function PreviousGames() {
       </div>
       <div className="link-row" style={{ margin: '0 0 4px' }}>
         <Link to="/" className="mainButton share-results-btn" style={{ marginBottom: 0, display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
-          Bugünün Filmine Dön
+          Son Filme Dön
         </Link>
         <button className="mainButton" style={{ height: 42 }} onClick={playRandom} disabled={unplayed === 0}>
           🎲 Rastgele Oyna ({unplayed} kaldı)
@@ -41,13 +41,12 @@ export function PreviousGames() {
       </div>
       <div className="prev-grid">
       {items.map((r) => {
-        const d = dateForNumber(r.num)
         const done = r.state === 'win' || r.state === 'lose'
         return (
           <Link key={r.num} to={r.num === today ? '/' : `/p/${r.num}`} className="prev-item">
             <div className="num">
               #{r.num}
-              <small>{d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}</small>
+              
             </div>
             {r.state === 'unplayed' ? (
               <span style={{ fontSize: 16 }}>❓</span>

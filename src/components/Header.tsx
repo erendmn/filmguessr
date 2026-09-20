@@ -9,10 +9,10 @@ export function Header({ openModal }: { openModal: (m: ModalKind) => void }) {
         <span className="clap">🎬</span>
         <span>
           Film<span className="accent">Guessr</span>
-          <small>Günlük Türk filmi bulmaca</small>
+          <small>Türk filmi bulmaca</small>
         </span>
       </Link>
-      <Link to="/onceki-gunler" className="iconBtn" title="Önceki Günler" aria-label="Önceki Günler">
+      <Link to="/onceki-gunler" className="iconBtn" title="Filmler" aria-label="Filmler">
         <CalendarIcon />
       </Link>
       <button className="iconBtn" onClick={() => openModal('stats')} title="İstatistikler" aria-label="İstatistikler">

@@ -49,12 +49,12 @@ export function HowToPlayModal({ onClose }: { onClose: () => void }) {
 export function AboutModal({ onClose }: { onClose: () => void }) {
   return (
     <Modal title={`${SITE_NAME} Hakkında`} onClose={onClose}>
-      <p>Her gün yeni bir Türk filmi seçilir ve filmden 6 sahne sana teker teker gösterilir.</p>
+      <p>Her bulmacada bir Türk filmi seçilir ve filmden 6 sahne sana teker teker gösterilir.</p>
       <p>
         Yeşilçam klasiklerinden Nuri Bilge Ceylan sinemasına, Kemal Sunal komedilerinden günümüz gişe filmlerine — farklı dönem ve türlerden, hem çok
         bilinen hem de daha az bilinen filmler var.
       </p>
-      <p>Havuzda şu an <b>{puzzles.length} Türk filmi</b> var. Her gün gece yarısı yeni bir film gelir; geçmiş günlerin tamamını <b>Önceki Günler</b>'den oynayabilirsin.</p>
+      <p>Havuzda <b>{todayNumber()} Türk filmi</b> var; tamamını <b>Filmler</b> sayfasından istediğin sırayla oynayabilirsin.</p>
       <p style={{ fontSize: 12.5, color: '#94a3b8' }}>
         Sahne görselleri ve film bilgileri{' '}
         <a href="https://www.themoviedb.org/" target="_blank" rel="noopener noreferrer">

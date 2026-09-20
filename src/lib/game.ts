@@ -36,8 +36,13 @@ const DAY = 86400000
 function startOfDay(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate())
 }
+// Günlük döngü 20 Eylül 2026'da donduruldu: sayaç #305'te durur, otomatik yeni film gelmez.
+// Tekrar açmak için FREEZE_AT'i Infinity yap.
+export const FREEZE_AT = 305
+export const FROZEN = Number.isFinite(FREEZE_AT)
 export function todayNumber(): number {
-  return Math.floor((startOfDay(new Date()).getTime() - START_DATE.getTime()) / DAY) + 1
+  const n = Math.floor((startOfDay(new Date()).getTime() - START_DATE.getTime()) / DAY) + 1
+  return Math.min(n, FREEZE_AT)
 }
 export function dateForNumber(n: number): Date {
   return new Date(START_DATE.getTime() + (n - 1) * DAY)

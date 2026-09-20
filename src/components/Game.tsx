@@ -5,6 +5,7 @@ import {
   copyText,
   dateForNumber,
   formatDate,
+  FROZEN,
   hintText,
   IMG,
   isCorrect,
@@ -197,8 +198,8 @@ export function Game({ num, showToast }: { num: number; showToast: (t: string) =
     <div className="current-game">
       <div className="current-game-number">
         <strong>Film #{num}</strong>
-        {!isToday && <> · {formatDate(date)}</>}
-        {isToday && <> · Bugün</>}
+        {!FROZEN && !isToday && <> · {formatDate(date)}</>}
+        {!FROZEN && isToday && <> · Bugün</>}
       </div>
 
       <div className="Screenshots">
@@ -367,7 +368,7 @@ function Result({ num, puzzle, saved, showToast }: { num: number; puzzle: Puzzle
       )}
       <div className="link-row">
         <Link to="/onceki-gunler" className="mainButton" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
-          Önceki Günleri Oyna
+          Tüm Filmler
         </Link>
         <a
           className="mainButton"
@@ -423,15 +424,26 @@ function Footer({ num, today, navigate }: { num: number; today: number; navigate
           <PrevIcon />
         </button>
         <div style={{ textAlign: 'center' }}>
-          <p className="countdown-label">Yeni film:</p>
-          <Countdown />
+          {FROZEN ? (
+            <>
+              <p className="countdown-label">Film</p>
+              <span className="countdown-to-next-game">
+                {num} / {today}
+              </span>
+            </>
+          ) : (
+            <>
+              <p className="countdown-label">Yeni film:</p>
+              <Countdown />
+            </>
+          )}
         </div>
         <button className={`iconButton ${num >= today ? 'hidden' : ''}`} onClick={() => navigate(num + 1)} aria-label="Sonraki film">
           <NextIcon />
         </button>
       </div>
       <p className="fine">
-        Her gün gece yarısı yeni bir Türk filmi. Yeşilçam'dan bugüne {puzzles.length} film. Görseller ve veriler{' '}
+        {FROZEN ? `Yeşilçam'dan bugüne ${today} Türk filmi.` : `Her gün gece yarısı yeni bir Türk filmi. Yeşilçam'dan bugüne ${puzzles.length} film.`} Görseller ve veriler{' '}
         <a href="https://www.themoviedb.org/" target="_blank" rel="noopener noreferrer">
           TMDB
         </a>
