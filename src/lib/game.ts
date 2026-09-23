@@ -12,8 +12,6 @@ export type Puzzle = {
   actor: string
   director: string
   franchise: string
-  overview: string
-  poster: string | null
   views: View[]
 }
 export type TitleEntry = { t: string; y: string; f: string }
@@ -30,6 +28,19 @@ export const START_DATE = new Date(2025, 10, 20) // 20 Kasım 2025 = Film #1
 export const IMG = (path: string, size = 'w780') => `https://image.tmdb.org/t/p/${size}${path}`
 
 export const puzzles = puzzlesRaw as Puzzle[]
+/** Özet + afiş yalnızca sonuç ekranında gerekir; ilk yüklemeyi şişirmemek için ayrı chunk */
+export type Details = { overview: string; poster: string | null }
+let detailsCache: Record<string, Details> | null = null
+export async function loadDetails(num: number): Promise<Details | null> {
+  if (!detailsCache) {
+    try {
+      detailsCache = (await import('../data/details.json')).default as Record<string, Details>
+    } catch {
+      return null
+    }
+  }
+  return detailsCache[String(num)] ?? null
+}
 export const titles = titlesRaw as TitleEntry[]
 
 const DAY = 86400000
@@ -59,12 +70,14 @@ export function formatDate(d: Date) {
   return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-/** Türkçe'ye duyarlı normalize: İ→i, I→ı, aksan/noktalama temizliği */
+/** Türkçe'ye duyarlı normalize + aksan katlama: "sekerpare" → "şekerpare" ile eşleşir */
+const FOLD: Record<string, string> = { ç: 'c', ğ: 'g', ı: 'i', ö: 'o', ş: 's', ü: 'u', â: 'a', î: 'i', û: 'u', é: 'e' }
 export function normalize(s: string): string {
   return s
     .replace(/İ/g, 'i')
     .replace(/I/g, 'ı')
     .toLocaleLowerCase('tr-TR')
+    .replace(/[çğıöşüâîûé]/g, (c) => FOLD[c] ?? c)
     .replace(/\s*\(\d{4}\)\s*$/, '')
     .replace(/[’'`´"«»]/g, '')
     .replace(/[^\p{L}\p{N}]+/gu, ' ')
@@ -85,12 +98,24 @@ export function isFranchiseMatch(guess: string, p: Puzzle) {
 /* ---------- Storage ---------- */
 // Kayıt anahtarı bulmaca numarasına değil filmin TMDB id'sine bağlı: havuz büyüyünce ilerleme kaymaz
 const KEY = (n: number) => `fg:v2:${puzzleForNumber(n).id}`
+const EMPTY: Saved = { guesses: [], partial: [], state: 'playing' }
+/** Bozuk/elle değiştirilmiş kayıtları sessizce yok say — tek bir bozuk anahtar oyunu kilitlemesin */
+function sanitize(v: unknown): Saved {
+  if (!v || typeof v !== 'object') return EMPTY
+  const o = v as Record<string, unknown>
+  if (!Array.isArray(o.guesses) || !o.guesses.every((g) => typeof g === 'string')) return EMPTY
+  const guesses = (o.guesses as string[]).slice(0, MAX_GUESSES)
+  const partial = Array.isArray(o.partial) ? guesses.map((_, i) => (o.partial as unknown[])[i] === true) : guesses.map(() => false)
+  const state = o.state === 'win' || o.state === 'lose' ? o.state : 'playing'
+  if (state === 'playing' && guesses.length >= MAX_GUESSES) return EMPTY
+  return { guesses, partial, state, finishedAt: typeof o.finishedAt === 'number' ? o.finishedAt : undefined }
+}
 export function loadSaved(n: number): Saved {
   try {
     const raw = localStorage.getItem(KEY(n))
-    if (raw) return JSON.parse(raw) as Saved
+    if (raw) return sanitize(JSON.parse(raw))
   } catch {}
-  return { guesses: [], partial: [], state: 'playing' }
+  return EMPTY
 }
 export function saveGame(n: number, s: Saved) {
   try {
@@ -207,7 +232,7 @@ export function hintText(view: number, p: Puzzle) {
     case 2:
       return `TMDB Puanı: ${p.rating.toFixed(1)}`
     case 3:
-      return `Tür: ${p.genre}`
+      return p.genre ? `Tür: ${p.genre}` : `Oyuncular: ${p.actor}`
     case 4:
       return `Yıl: ${p.year}`
     case 5:

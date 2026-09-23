@@ -138,7 +138,16 @@ for f in films:
 print('puzzles',len(puzzles))
 random.Random(4242).shuffle(puzzles)
 for i,p in enumerate(puzzles): p['num']=i+1
-json.dump(puzzles, open('src/data/puzzles.json','w'), ensure_ascii=False)
+json.dump(puzzles, open('data/puzzles_full.json','w'), ensure_ascii=False)
+# Yayınlanan sürüm: oyun FREEZE_AT=305'te donduruldu; ilk yüklemeyi şişirmemek için
+# sadece oynanabilir bulmacalar gider, özet/afiş ise ayrı (tembel yüklenen) dosyada durur.
+PUZZLE_LIMIT=305
+live=puzzles[:PUZZLE_LIMIT]
+details={str(p['num']): {'overview': p['overview'], 'poster': p['poster']} for p in live}
+slim=[{k:v for k,v in p.items() if k not in ('overview','poster')} for p in live]
+json.dump(slim, open('src/data/puzzles.json','w'), ensure_ascii=False)
+json.dump(details, open('src/data/details.json','w'), ensure_ascii=False)
+print('yayınlanan', len(slim), 'arşivde', len(puzzles))
 
 # suggestion list from survey + puzzle answers
 survey=json.load(open('data/survey.json'))

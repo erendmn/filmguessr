@@ -11,6 +11,8 @@ import {
   isCorrect,
   isFranchiseMatch,
   loadSaved,
+  loadDetails,
+  type Details,
   MAX_GUESSES,
   nextMidnight,
   puzzleForNumber,
@@ -323,6 +325,14 @@ export function Game({ num, showToast }: { num: number; showToast: (t: string) =
 
 function Result({ num, puzzle, saved, showToast }: { num: number; puzzle: Puzzle; saved: Saved; showToast: (t: string) => void }) {
   const [label, setLabel] = useState('Sonucu Paylaş')
+  const [details, setDetails] = useState<Details | null>(null)
+  useEffect(() => {
+    let alive = true
+    loadDetails(num).then((d) => alive && setDetails(d))
+    return () => {
+      alive = false
+    }
+  }, [num])
   const [showGuesses, setShowGuesses] = useState(false)
   const win = saved.state === 'win'
   const stats = computeStats(todayNumber())
@@ -381,7 +391,7 @@ function Result({ num, puzzle, saved, showToast }: { num: number; puzzle: Puzzle
         </a>
       </div>
       <div className="movie-card">
-        {puzzle.poster && <img src={IMG(puzzle.poster, 'w342')} alt={puzzle.answers[0]} loading="lazy" />}
+        {details?.poster && <img src={IMG(details.poster, 'w342')} alt={puzzle.answers[0]} loading="lazy" />}
         <div>
           <h4>
             {puzzle.answers[0]} ({puzzle.year})
@@ -391,7 +401,7 @@ function Result({ num, puzzle, saved, showToast }: { num: number; puzzle: Puzzle
             {puzzle.actor && <>Başrol: {puzzle.actor} · </>}
             {puzzle.genre} · TMDB {puzzle.rating.toFixed(1)}
           </div>
-          <p>{puzzle.overview || 'Bu film için özet bulunamadı.'}</p>
+          <p>{details ? details.overview || 'Bu film için özet bulunamadı.' : 'Yükleniyor…'}</p>
         </div>
       </div>
     </div>
